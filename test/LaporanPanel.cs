@@ -74,19 +74,16 @@ namespace test
             Connector kon = new Connector();
 
             SqlConnection con = kon.getCon();
-
             con.Open();
 
             SqlCommand cmd = new SqlCommand(
-        @"SELECT tbl_transaksi.no_transaksi AS 'No Transaksi', 
-                 tbl_transaksi.tgl_transaksi AS 'Tanggal Transaksi', 
-                 tbl_transaksi.total_bayar AS 'Total Penjualan', 
-                 tbl_user.nama AS 'Nama Kasir', 
-                 tbl_pelanggan.nama AS 'Nama Pelanggan' 
-          FROM tbl_transaksi 
-          JOIN tbl_user ON tbl_transaksi.id_user = tbl_user.id_user 
-          JOIN tbl_pelanggan ON tbl_transaksi.id_pelanggan = tbl_pelanggan.id_pelanggan", con);
-
+                @"SELECT tbl_transaksi.no_transaksi as 'No Transaksi', 
+                         tbl_transaksi.tgl_transaksi as 'Tanggal Transaksi', 
+                         tbl_transaksi.total_bayar as 'Total Penjualan', 
+                         tbl_transaksi.nama_kasir as 'Nama Kasir',
+                         tbl_pelanggan.nama as 'Nama Pelanggan' from tbl_transaksi
+                 JOIN tbl_pelanggan on tbl_pelanggan.id_pelanggan = tbl_transaksi.id_pelanggan"
+            , con);
 
             DataSet ds = new DataSet();
             SqlDataAdapter da = new SqlDataAdapter(cmd);
@@ -95,6 +92,7 @@ namespace test
 
             dataGridView1.DataSource = ds;
             dataGridView1.DataMember = "tbl_transaksi";
+
             dataGridView1.AllowUserToAddRows = false;
             dataGridView1.Refresh();
         }
@@ -117,33 +115,32 @@ namespace test
 
         private void button1_Click(object sender, EventArgs e)
         {
-            DateTime date1 = dateTimePicker1.Value.Date;
-            DateTime date2 = dateTimePicker2.Value.Date;
+            DateTime tgl1 = dateTimePicker1.Value.Date;
+            DateTime tgl2 = dateTimePicker2.Value.Date;
 
-            if (date2 < date1)
+            if(tgl2 < tgl1)
             {
-                MessageBox.Show("tanggal ke 2 tidak boleh lebih kecil dari tanggal ke 1", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Tgl 2 tidak boleh lebih kecil dari tanggal 1");
                 return;
             }
 
             Connector kon = new Connector();
 
             SqlConnection con = kon.getCon();
-
             con.Open();
 
             SqlCommand cmd = new SqlCommand(
-        @"SELECT tbl_transaksi.no_transaksi AS 'No Transaksi', 
-                 tbl_transaksi.tgl_transaksi AS 'Tanggal Transaksi', 
-                 tbl_transaksi.total_bayar AS 'Total Penjualan', 
-                 tbl_user.nama AS 'Nama Kasir', 
-                 tbl_pelanggan.nama AS 'Nama Pelanggan' 
-          FROM tbl_transaksi 
-          JOIN tbl_user ON tbl_transaksi.id_user = tbl_user.id_user 
-          JOIN tbl_pelanggan ON tbl_transaksi.id_pelanggan = tbl_pelanggan.id_pelanggan where convert(date, tbl_transaksi.tgl_transaksi) between @tgl1 and @tgl2", con);
+                @"SELECT tbl_transaksi.no_transaksi as 'No Transaksi', 
+                         tbl_transaksi.tgl_transaksi as 'Tanggal Transaksi', 
+                         tbl_transaksi.total_bayar as 'Total Penjualan', 
+                         tbl_transaksi.nama_kasir as 'Nama Kasir',
+                         tbl_pelanggan.nama as 'Nama Pelanggan' from tbl_transaksi
+                 JOIN tbl_pelanggan on tbl_pelanggan.id_pelanggan = tbl_transaksi.id_pelanggan where tbl_transaksi.tgl_transaksi between @tgl1 and @tgl2"
+            , con);
 
-            cmd.Parameters.AddWithValue("@tgl1", date1);
-            cmd.Parameters.AddWithValue("@tgl2", date2);
+            cmd.Parameters.AddWithValue("@tgl1", tgl1);
+            cmd.Parameters.AddWithValue("@tgl2", tgl2);
+
 
             DataSet ds = new DataSet();
             SqlDataAdapter da = new SqlDataAdapter(cmd);
@@ -152,28 +149,37 @@ namespace test
 
             dataGridView1.DataSource = ds;
             dataGridView1.DataMember = "tbl_transaksi";
+
             dataGridView1.AllowUserToAddRows = false;
             dataGridView1.Refresh();
         }
 
         private void button2_Click(object sender, EventArgs e)
         {
-            DateTime date1 = dateTimePicker1.Value.Date;
-            DateTime date2 = dateTimePicker2.Value.Date;
+            DateTime tgl1 = dateTimePicker1.Value.Date;
+            DateTime tgl2 = dateTimePicker2.Value.Date;
+
+            if (tgl2 < tgl1)
+            {
+                MessageBox.Show("Tgl 2 tidak boleh lebih kecil dari tanggal 1");
+                return;
+            }
 
             Connector kon = new Connector();
 
             SqlConnection con = kon.getCon();
-
             con.Open();
 
-            SqlCommand cmd = new SqlCommand("select tgl_transaksi, total_bayar from tbl_transaksi where tgl_transaksi between @tgl1 and @tgl2", con);
+            SqlCommand cmd = new SqlCommand(
+                @"SELECT tgl_transaksi, total_bayar from tbl_transaksi where tgl_transaksi between @tgl1 and @tgl2"
+            , con);
 
-            cmd.Parameters.AddWithValue("@tgl1", date1);
-            cmd.Parameters.AddWithValue("@tgl2", date2);
+            cmd.Parameters.AddWithValue("@tgl1", tgl1);
+            cmd.Parameters.AddWithValue("@tgl2", tgl2);
+
 
             chart1.Series.Clear();
-            Series series = chart1.Series.Add("omset");
+            Series series = chart1.Series.Add("Omset");
             series.ChartType = SeriesChartType.Column;
 
             SqlDataReader reader = cmd.ExecuteReader();
@@ -182,9 +188,11 @@ namespace test
             {
                 DateTime tgl = reader.GetDateTime(0);
                 long total = reader.GetInt64(1);
-
                 series.Points.AddXY(tgl, total);
             }
+
+            
+
         }
     }
 }

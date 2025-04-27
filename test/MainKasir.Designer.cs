@@ -342,6 +342,7 @@ namespace test
             this.button5.TabIndex = 33;
             this.button5.Text = "Print";
             this.button5.UseVisualStyleBackColor = false;
+            this.button5.Click += new System.EventHandler(this.button5_Click);
             // 
             // button6
             // 

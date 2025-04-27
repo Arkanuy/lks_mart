@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Data.SqlClient;
+using System.Drawing.Printing;
 
 namespace test
 {
@@ -100,57 +101,49 @@ namespace test
             totalBox.Text = "Rp. ";
         }
 
+        private static Connector kon = new Connector();
+        
+
+
+
         private void comboBox1_ValueMemberChanged(object sender, EventArgs e)
         {
-            string[] parts = (comboBox1.SelectedItem?.ToString() ?? "").Split(new[] {" - "}, StringSplitOptions.None);
-
-            Connector kon = new Connector();
-
-            SqlConnection con = kon.getCon();
-
-            SqlCommand cmd = new SqlCommand("select harga_satuan from tbl_barang where kode_barang = '" + parts[0] + "'", con);
-
-
-            SqlDataReader reader = cmd.ExecuteReader();
-
-            reader.Read();
-            if (reader.HasRows)
-            {
-                hargaBox.Text = string.Format("Rp. {0:#,##0}", reader["harga_satuan"].ToString());
-            }
+            
+            
         }
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
-            string[] parts = (comboBox1.SelectedItem?.ToString() ?? "").Split(new[] { " - " }, StringSplitOptions.None);
-
-            Connector kon = new Connector();
-
+            string[] parts = (comboBox1.SelectedItem?.ToString() ?? "").Split(new[] { "-" }, StringSplitOptions.None);
             SqlConnection con = kon.getCon();
             con.Open();
-            SqlCommand cmd = new SqlCommand("select harga_satuan from tbl_barang where kode_barang = '" + parts[0] + "'", con);
 
+            SqlCommand cmd = new SqlCommand("select harga_satuan from tbl_barang where kode_barang = @kode", con);
+            cmd.Parameters.AddWithValue("@kode", parts[0]);
 
             SqlDataReader reader = cmd.ExecuteReader();
 
             reader.Read();
             if (reader.HasRows)
             {
-                hargaBox.Text = string.Format("Rp. {0:#,##0}", reader["harga_satuan"]);
+                hargaBox.Text = convert(reader["harga_satuan"]);
             }
+        }
+
+        string convert(dynamic args)
+        {
+            return string.Format("Rp. {0:#,##0}", args);
         }
 
         private void qtyBox_TextChanged(object sender, EventArgs e)
         {
-            if (int.TryParse(qtyBox.Text, out _))
+            if(comboBox1.SelectedIndex != 0 && long.TryParse(qtyBox.Text, out _))
             {
                 long hargaSatuan = long.Parse(hargaBox.Text.Replace("Rp. ", "").Replace(".", ""));
-
                 long qty = long.Parse(qtyBox.Text);
+                long total = hargaSatuan * qty;
 
-                long totalHarga = hargaSatuan * qty;
-
-                totalBox.Text = string.Format("Rp. {0:#,##0}", totalHarga);
+                totalBox.Text = convert(total);
             }
         }
 
@@ -162,9 +155,10 @@ namespace test
         private void setupKeranjang()
         {
             dataGridView1.Columns.Clear();
+
             dataGridView1.Columns.Add(new DataGridViewTextBoxColumn()
             {
-                Name = "No Transaksi",
+                Name = "no transaksi",
                 HeaderText = "No Transaksi",
                 DataPropertyName = "no_transaksi",
                 DisplayIndex = 0
@@ -172,7 +166,7 @@ namespace test
 
             dataGridView1.Columns.Add(new DataGridViewTextBoxColumn()
             {
-                Name = "Kode Barang",
+                Name = "kode barang",
                 HeaderText = "Kode Barang",
                 DataPropertyName = "kode_barang",
                 DisplayIndex = 1
@@ -180,7 +174,7 @@ namespace test
 
             dataGridView1.Columns.Add(new DataGridViewTextBoxColumn()
             {
-                Name = "Nama Barang",
+                Name = "nama Barang",
                 HeaderText = "Nama Barang",
                 DataPropertyName = "nama_barang",
                 DisplayIndex = 2
@@ -188,7 +182,7 @@ namespace test
 
             dataGridView1.Columns.Add(new DataGridViewTextBoxColumn()
             {
-                Name = "Harga Satuan",
+                Name = "harga satuan",
                 HeaderText = "Harga Satuan",
                 DataPropertyName = "harga_satuan",
                 DisplayIndex = 3
@@ -196,7 +190,7 @@ namespace test
 
             dataGridView1.Columns.Add(new DataGridViewTextBoxColumn()
             {
-                Name = "Qty",
+                Name = "qty",
                 HeaderText = "Qty",
                 DataPropertyName = "qty",
                 DisplayIndex = 4
@@ -204,47 +198,86 @@ namespace test
 
             dataGridView1.Columns.Add(new DataGridViewTextBoxColumn()
             {
-                Name = "Total Harga",
-                HeaderText = "Total Harga",
-                DataPropertyName = "total_bayar",
+                Name = "total",
+                HeaderText = "Total",
+                DataPropertyName = "total",
                 DisplayIndex = 5
             });
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
-            if (MessageBox.Show("Yakin untuk menambah barang ke keranjang?", "Konfirmasi tambah barang", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            if(comboBox1.SelectedIndex == 0 || hargaBox.Text == "" || qtyBox.Text == "" || totalBox.Text == "")
             {
-                if(comboBox1.SelectedIndex == 0 || teleponBox.Text == "" || namaBox.Text == "" || qtyBox.Text == "")
+                MessageBox.Show("pastikan field yang di perlukan sudah di isi");
+                return;
+            }
+
+            if(!int.TryParse(qtyBox.Text, out _))
+            {
+                MessageBox.Show("Format qty salah");
+                return;
+            }
+            string[] parts = (comboBox1.SelectedItem?.ToString() ?? "").Split(new[] { " - " }, StringSplitOptions.None);
+
+            int count = dataGridView1.Rows.Count;
+            string no_transaksi = count.ToString("D3");
+            string kode = parts[0];
+            string nama = parts[1];
+            string harga = hargaBox.Text;
+            string qty = qtyBox.Text;
+            string total = totalBox.Text;
+
+            dataGridView1.Rows.Add(no_transaksi, kode, nama, harga, qty, total);
+            dataGridView1.Refresh();
+            reset();            
+
+        }
+
+        long totalHarga = 0;
+
+        private void dataGridView1_RowsAdded(object sender, DataGridViewRowsAddedEventArgs e)
+        {
+            totalHarga = 0;
+            foreach (DataGridViewRow row in dataGridView1.Rows)
+            {
+                if (row.IsNewRow) continue;
+                totalHarga += long.Parse(row.Cells["total"].Value.ToString().Replace("Rp. ", "").Replace(".", ""));
+            }
+            label11.Text = "Total Harga : " + convert(totalHarga);
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            long bayar = long.Parse(textBox6.Text.Replace("Rp. ", ".").Replace(".", ""));
+            long kembalian = bayar - totalHarga;
+
+            label13.Text = "Jumlah Kembalian : " + convert(kembalian);
+        }
+
+        private void button6_Click(object sender, EventArgs e)
+        {
+            if(dataGridView1.Rows.Count > 1)
+            {
+                if(teleponBox.Text == "" || namaBox.Text == "")
                 {
-                    MessageBox.Show("Pastikan field sudah terisi dengan benar", "Error tambah barang", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("pastikan field telepon dan nama sudah di isi");
                     return;
                 }
 
                 if(!int.TryParse(teleponBox.Text, out _))
                 {
-                    MessageBox.Show("format nomor telepon salah", "Error tambah barang", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("format nomor telepon salah");
                     return;
                 }
-
-                string[] parts = (comboBox1.SelectedItem?.ToString() ?? "").Split(new[] { " - " }, StringSplitOptions.None);
-
-                int count = dataGridView1.Rows.Count;
-                string no_transaksi = "TR" + count.ToString("D3");
-                string kode_barang = parts[0];
-                string nama_barang = parts[1];
-                string harga_satuan = hargaBox.Text;
-                int qty = int.Parse(qtyBox.Text);
-                string total_harga = totalBox.Text;
-
-                dataGridView1.Rows.Add(no_transaksi, kode_barang, nama_barang, harga_satuan, qty, total_harga);
-                dataGridView1.Refresh();
 
                 Connector kon = new Connector();
                 SqlConnection con = kon.getCon();
 
                 con.Open();
-                SqlCommand cmd = new SqlCommand("select * from tbl_pelanggan where nama = '"+namaBox.Text+"' or telepon = '"+teleponBox.Text+"'", con);
+                SqlCommand cmd = new SqlCommand("select * from tbl_pelanggan where telepon = @tlp", con);
+                cmd.Parameters.AddWithValue("@tlp", teleponBox.Text);
+
                 SqlDataReader reader = cmd.ExecuteReader();
 
                 reader.Read();
@@ -253,164 +286,136 @@ namespace test
                 {
                     reader.Close();
 
-                    cmd = new SqlCommand("insert into tbl_pelanggan (nama, telepon) values (@nama, @telepon)", con);
+                    cmd = new SqlCommand("insert into tbl_pelanggan (telepon, nama) values (@tlp, @nama)", con);
+                    cmd.Parameters.AddWithValue("@tlp", teleponBox.Text);
                     cmd.Parameters.AddWithValue("@nama", namaBox.Text);
-                    cmd.Parameters.AddWithValue("@telepon", teleponBox.Text);
 
                     cmd.ExecuteNonQuery();
-
-                    con.Close();
                 }
-
-                reset();
-
-            }
-        }
-
-        long totalHarga = 0;
-
-        private void dataGridView1_RowsAdded(object sender, DataGridViewRowsAddedEventArgs e)
-        {
-            totalHarga = 0;
-            foreach(DataGridViewRow row in dataGridView1.Rows)
-            {
-                if (row.IsNewRow) continue;
-
-                string total_harga = row.Cells["Total Harga"].Value.ToString();
-
-                totalHarga += long.Parse(total_harga.Replace("Rp. ", "").Replace(".", ""));
-            }
-
-            label11.Text = "Total Harga : " + string.Format("Rp. {0:#,##0}", totalHarga);
-        }
-
-        private void button3_Click(object sender, EventArgs e)
-        {
-            if (MessageBox.Show("Yakin untuk membayar keranjang ini?", "Konfirmasi bayar", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-            {
-                if (teleponBox.Text == "" || namaBox.Text == "")
-                {
-                    MessageBox.Show("Pastikan field telepon dan nama sudah terisi dengan benar", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-
-                if (!int.TryParse(teleponBox.Text, out _))
-                {
-                    MessageBox.Show("format nomor telepon salah", "Error tambah barang", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-
-                long jumlah_bayar = int.Parse(textBox6.Text.Replace("Rp. ", "").Replace(".", "").Replace(".", ""));
-                long kembalian = jumlah_bayar - totalHarga;
-
-                label13.Text = "Jumlah Kembalian : " + string.Format("Rp. {0:#,##0}", kembalian);
-                textBox6.Text = "Rp. ";
-            }
-        }
-
-        private void button6_Click(object sender, EventArgs e)
-        {
-            string[] parts = (comboBox1.SelectedItem?.ToString() ?? "").Split(new[] { " - " }, StringSplitOptions.None);
-
-            Connector kon = new Connector();
-            SqlConnection con = kon.getCon();
-
-            con.Open();
-
-            SqlCommand cmd = new SqlCommand("select id_user from tbl_user where username = @username", con);
-            cmd.Parameters.AddWithValue("@username", LoginForm.username);
-            SqlDataReader reader = cmd.ExecuteReader();
-
-            reader.Read();
-            int id_user, id_pelanggan, id_barang;
-            id_user = 0;
-            if (reader.HasRows)
-            {
-                id_user = int.Parse(reader["id_user"].ToString());
                 reader.Close();
-            }
+                int id_user = 0, id_pelanggan = 0, id_barang = 0;
 
-            cmd = new SqlCommand("select id_pelanggan from tbl_pelanggan where telepon = @tlp", con);
-            cmd.Parameters.AddWithValue("@tlp", teleponBox.Text);
+                // get id_user
 
-            reader = cmd.ExecuteReader();
-            reader.Read();
-            id_pelanggan = 0;
-            if (reader.HasRows)
-            {
-                id_pelanggan = int.Parse(reader["id_pelanggan"].ToString());
-                reader.Close();
-            }
-
-            
-            foreach (DataGridViewRow row in dataGridView1.Rows)
-            {
-                if (row.IsNewRow) continue;
-
-                DateTime now = DateTime.Now;
-
-                string no_transaksi = now.ToString("yyyyMMddHHmmss");
-                string tanggal_transaksi = now.ToString("yyyy-MM-dd");
-                string nama_kasir = LoginForm.username;
-                long total_bayar = totalHarga;
-                string kode_barang = row.Cells["Kode Barang"].Value.ToString();
-
-                cmd = new SqlCommand("select id_barang from tbl_barang where kode_barang = @kode", con);
-                cmd.Parameters.AddWithValue("@kode", kode_barang);
+                cmd = new SqlCommand("select id_user from tbl_user where username = @uname", con);
+                cmd.Parameters.AddWithValue("@uname", LoginForm.username);
 
                 reader = cmd.ExecuteReader();
+
                 reader.Read();
-                id_barang = 0;
+
                 if (reader.HasRows)
                 {
-                    id_barang = int.Parse(reader["id_barang"].ToString());
+
+                    id_user = reader.GetInt32(0);
                     reader.Close();
                 }
 
+                // get id_pelanggan
 
-                cmd = new SqlCommand("insert into tbl_transaksi (no_transaksi, tgl_transaksi, nama_kasir, total_bayar, id_user, id_pelanggan, id_barang) values (@no,@tgl, @nama, @total, @id_u, @id_p, @id_b)", con);
-                cmd.Parameters.AddWithValue("@no", no_transaksi);
-                cmd.Parameters.AddWithValue("@tgl", tanggal_transaksi);
-                cmd.Parameters.AddWithValue("@nama", nama_kasir);
-                cmd.Parameters.AddWithValue("@total", total_bayar);
-                cmd.Parameters.AddWithValue("@id_u", id_user);
-                cmd.Parameters.AddWithValue("@id_p", id_pelanggan);
-                cmd.Parameters.AddWithValue("@id_b", id_barang);
+                cmd = new SqlCommand("select id_pelanggan from tbl_pelanggan where telepon = @tlp", con);
+                cmd.Parameters.AddWithValue("@tlp", teleponBox.Text);
 
-                cmd.ExecuteNonQuery();
+                reader = cmd.ExecuteReader();
+
+                reader.Read();
+
+                if (reader.HasRows)
+                {
+
+                    id_pelanggan = reader.GetInt32(0);
+                    reader.Close();
+                }
+
+                foreach(DataGridViewRow row in dataGridView1.Rows)
+                {
+                    if (row.IsNewRow) continue;
+                    // get id_barang
+
+                    cmd = new SqlCommand("select id_barang from tbl_barang where kode_barang = @kode", con);
+                    cmd.Parameters.AddWithValue("@kode", row.Cells["kode barang"].Value.ToString());
+
+                    reader = cmd.ExecuteReader();
+
+                    reader.Read();
+
+                    if (reader.HasRows)
+                    {
+
+                        id_barang = reader.GetInt32(0);
+                        reader.Close();
+                    }
+                    string no_tr = DateTime.Now.ToString("ddMMyyyyHHmmss");
+                    string tgl = DateTime.Now.ToString("yyyy-MM-dd");
+
+                    string nama_kasir = LoginForm.username;
+                    long total_bayar = long.Parse(row.Cells["total"].Value.ToString().Replace("Rp. ", "").Replace(".", ""));
+
+                    cmd = new SqlCommand("insert into tbl_transaksi (no_transaksi, tgl_transaksi, nama_kasir, total_bayar, id_user, id_pelanggan, id_barang) values (@no, @tgl, @nama, @total, @id_u, @id_p, @id_b)", con);
+                    cmd.Parameters.AddWithValue("@no", no_tr);
+                    cmd.Parameters.AddWithValue("@tgl", tgl);
+                    cmd.Parameters.AddWithValue("@nama", nama_kasir);
+                    cmd.Parameters.AddWithValue("@total", total_bayar);
+                    cmd.Parameters.AddWithValue("@id_u", id_user);
+                    cmd.Parameters.AddWithValue("@id_p", id_pelanggan);
+                    cmd.Parameters.AddWithValue("@id_b", id_barang);
+
+                    cmd.ExecuteNonQuery();
+                }
+                dataGridView1.Rows.Clear();
+
+                dataGridView1.Refresh();
             }
-            dataGridView1.Rows.Clear();
-            namaBox.Text = "";
-            teleponBox.Text = "";
-            textBox6.Text = "";
-            label11.Text = "Total Harga: Rp. ";
-            label13.Text = "Jumlah Kembalian Rp : ";
-
         }
 
         private void teleponBox_TextChanged(object sender, EventArgs e)
         {
-            if(int.TryParse(teleponBox.Text, out _))
+            
+        }
+
+        private void button5_Click(object sender, EventArgs e)
+        {
+           if(dataGridView1.Rows.Count > 1)
             {
-
-                Connector kon = new Connector();
-
-                SqlConnection con = kon.getCon();
-
-                con.Open();
-
-                SqlCommand cmd = new SqlCommand("select nama from tbl_pelanggan where telepon = '"+teleponBox.Text+"'", con);
-                SqlDataReader reader = cmd.ExecuteReader();
-
-                reader.Read();
-
-                if (reader.HasRows)
+                PrintDocument pd = new PrintDocument();
+                pd.PrintPage += (s, ev) =>
                 {
-                    namaBox.Text = reader.GetString(0);
-                }
+                    Font font = new Font("Cambria", 16);
+                    Pen pen = new Pen(Brushes.Black);
+
+                    float y = 20;
+                    // header
+                    ev.Graphics.DrawString("INVOICE: " + DateTime.Now.ToString("dd/MM/yyyy"),font, Brushes.Black, 20, y);
+                    y += 30;
+                    ev.Graphics.DrawLine(pen, 20, y, 400, y);
+                    y += 40;
+
+                    // header item
+
+                    ev.Graphics.DrawString("Barang", font, Brushes.Black, 20, y);
+                    ev.Graphics.DrawString("Qty", font, Brushes.Black, 200, y);
+                    ev.Graphics.DrawString("Harga", font, Brushes.Black, 240, y);
+                    y += 60;
+
+                    foreach(DataGridViewRow row in dataGridView1.Rows)
+                    {
+                        if (row.IsNewRow) continue;
+                        ev.Graphics.DrawString(row.Cells["nama barang"].Value.ToString(), font, Brushes.Black, 20, y);
+                        ev.Graphics.DrawString(row.Cells["qty"].Value.ToString(), font, Brushes.Black, 200, y);
+                        ev.Graphics.DrawString(row.Cells["total"].Value.ToString(), font, Brushes.Black, 240, y);
+                        y += 30;
+                    }
+
+                    ev.Graphics.DrawLine(pen, 20, y, 400, y);
+                    ev.Graphics.DrawString("Total Harga : " + convert(totalHarga), font, Brushes.Black, 240, y);
+
+
+
+                };
+
+                pd.Print();
             }
-
-
+            
         }
     }
 }
