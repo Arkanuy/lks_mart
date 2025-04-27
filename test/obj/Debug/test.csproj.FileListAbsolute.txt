@@ -1,0 +1,16 @@
+C:\Users\HP\source\repos\test\test\bin\Debug\test.exe.config
+C:\Users\HP\source\repos\test\test\bin\Debug\test.exe
+C:\Users\HP\source\repos\test\test\bin\Debug\test.pdb
+C:\Users\HP\source\repos\test\test\obj\Debug\test.csproj.AssemblyReference.cache
+C:\Users\HP\source\repos\test\test\obj\Debug\test.Properties.Resources.resources
+C:\Users\HP\source\repos\test\test\obj\Debug\test.csproj.GenerateResource.cache
+C:\Users\HP\source\repos\test\test\obj\Debug\test.csproj.CoreCompileInputs.cache
+C:\Users\HP\source\repos\test\test\obj\Debug\test.exe
+C:\Users\HP\source\repos\test\test\obj\Debug\test.pdb
+C:\Users\HP\source\repos\test\test\obj\Debug\test.LoginForm.resources
+C:\Users\HP\source\repos\test\test\obj\Debug\test.MainAdmin.resources
+C:\Users\HP\source\repos\test\test\obj\Debug\test.LogActivityPanel.resources
+C:\Users\HP\source\repos\test\test\obj\Debug\test.KelolaUser.resources
+C:\Users\HP\source\repos\test\test\obj\Debug\test.MainGudang.resources
+C:\Users\HP\source\repos\test\test\obj\Debug\test.MainKasir.resources
+C:\Users\HP\source\repos\test\test\obj\Debug\test.LaporanPanel.resources
